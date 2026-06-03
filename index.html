@@ -551,19 +551,22 @@ async function fetchFromGAS() {
 async function init() {
   let rawData = null;
 
-  if (GAS_URL !== 'YOUR_CAMPAIGN_GAS_URL_HERE') {
+  if (GAS_URL !== 'https://script.google.com/macros/s/AKfycbyTcoGfyfZvPzEQ5m5PkVp_4sBBXKYA8NvZyUzJR_G8NkEx3YblSBKUSKy5ubU4awZRgA/exec') {
     try { rawData = await fetchFromGAS(); } catch(e) {}
   }
   if (!rawData) rawData = FALLBACK_DATA;
 
-  allCampaigns = groupCampaigns(rawData);
+  // 終了済みを除外
+  const grouped = groupCampaigns(rawData);
+  allCampaigns = grouped.filter(c => getPeriodStatus(c.start, c.end) !== 'expired');
 
-  // 期間順（終了済みを末尾に）
+  // メーカーコード順 → 同一コード内は終了間近を先頭に
   allCampaigns.sort((a, b) => {
-    const sa = getPeriodStatus(a.start, a.end);
-    const sb = getPeriodStatus(b.start, b.end);
-    const order = { 'ending-soon':0, 'active-now':1, 'upcoming':2, 'expired':3 };
-    return (order[sa]||9) - (order[sb]||9);
+    const codeA = parseInt(a.makerCode) || 0;
+    const codeB = parseInt(b.makerCode) || 0;
+    if (codeA !== codeB) return codeA - codeB;
+    const statusOrder = { 'ending-soon':0, 'active-now':1, 'upcoming':2 };
+    return (statusOrder[getPeriodStatus(a.start, a.end)]||9) - (statusOrder[getPeriodStatus(b.start, b.end)]||9);
   });
 
   document.getElementById('total-count').textContent = allCampaigns.length + ' 件';
