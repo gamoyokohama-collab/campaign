@@ -551,7 +551,7 @@ async function fetchFromGAS() {
 async function init() {
   let rawData = null;
 
-  if (GAS_URL !== 'https://script.google.com/macros/s/AKfycbyTcoGfyfZvPzEQ5m5PkVp_4sBBXKYA8NvZyUzJR_G8NkEx3YblSBKUSKy5ubU4awZRgA/exec') {
+  if (GAS_URL && GAS_URL !== 'YOUR_CAMPAIGN_GAS_URL_HERE') {
     try { rawData = await fetchFromGAS(); } catch(e) {}
   }
   if (!rawData) rawData = FALLBACK_DATA;
