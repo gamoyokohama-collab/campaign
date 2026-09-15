@@ -353,7 +353,7 @@ const FALLBACK_DATA = [
     title:'夏のブリーチデザインサポートキャンペーン',
     start:'2026/07/01', end:'2026/08/31',
     products:[
-      { name:'ファイバープレックス　パウダーブリーチ', spec:'', deal:'2+1' }
+      { name:'ファイバープレックス パウダーブリーチ', spec:'', deal:'2+1' }
     ],
     note:'', pamphlet:'https://acrobat.adobe.com/id/urn:aaid:sc:AP:08b54421-dac6-4fa8-a6bb-ad27ab2eabac'
   },
@@ -362,7 +362,7 @@ const FALLBACK_DATA = [
     title:'（新規お取り扱いサロン様限定）夏のブリーチデザインサポートキャンペーン',
     start:'2026/06/01', end:'2026/07/30',
     products:[
-      { name:'イゴラ　ヴァリオブロンドプラス', spec:'', deal:'1+1' }
+      { name:'イゴラ ヴァリオブロンドプラス', spec:'', deal:'1+1' }
     ],
     note:'新たにお取り扱いいただけるサロン様限定企画となります',
     pamphlet:'https://acrobat.adobe.com/id/urn:aaid:sc:AP:e994f5ef-fc60-4b45-9ff0-b308eb3398a3'
@@ -406,11 +406,12 @@ function periodLabel(status, start, end) {
   return `✅ ${s}〜${e}`;
 }
 
-// データを「タイトル単位」にグループ化
+// データを「メーカー・タイトル・期間単位」にグループ化（★ここを修正）
 function groupCampaigns(data) {
   const map = new Map();
   data.forEach(row => {
-    const key = `${row.makerCode}_${row.title}`;
+    // 期間（start, end）も含めて同一キャンペーンかを判定する
+    const key = `${row.makerCode}_${row.title}_${row.start}_${row.end}`;
     if (!map.has(key)) {
       map.set(key, {
         makerCode: row.makerCode,
@@ -535,12 +536,12 @@ document.getElementById('search-input').addEventListener('input', e => {
   render();
 });
 
-// GASからデータ取得（スプレッドシートが別なので別GAS URL）
+// GASからデータ取得（タイムスタンプ付きでキャッシュ防止）
 async function fetchFromGAS() {
   return new Promise((resolve, reject) => {
     const cb = 'cb_' + Date.now();
     const s = document.createElement('script');
-    s.src = GAS_URL + '?callback=' + cb;
+    s.src = GAS_URL + '?callback=' + cb + '&_t=' + Date.now();
     window[cb] = data => { delete window[cb]; s.remove(); resolve(data); };
     s.onerror = () => reject();
     setTimeout(() => reject(), 8000);
