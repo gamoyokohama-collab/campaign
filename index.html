@@ -249,8 +249,10 @@
       padding: 60px 20px;
       color: var(--gray);
       font-size: 14px;
+      line-height: 1.6;
     }
     .empty .emoji { font-size: 40px; margin-bottom: 10px; }
+
     #loading {
       position: fixed;
       inset: 0;
@@ -304,7 +306,7 @@
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyTcoGfyfZvPzEQ5m5PkVp_4sBBXKYA8NvZyUzJR_G8NkEx3YblSBKUSKy5ubU4awZRgA/exec';
-const LOCAL_STORAGE_KEY = 'gamo_campaign_cache_v1';
+const LOCAL_STORAGE_KEY = 'gamo_campaign_cache_v2';
 
 const CAT_COLOR = {
   'ブリーチ':   ['#7B3FA0','#F0E6F9'],
@@ -316,6 +318,7 @@ const CAT_COLOR = {
   'シャンプー': ['#4A4A90','#ECEEF9'],
   'その他':     ['#666666','#F0F0F0'],
 };
+
 function getCatColors(cat) {
   return CAT_COLOR[cat] || ['#555','#f0f0f0'];
 }
@@ -470,28 +473,30 @@ document.getElementById('search-input').addEventListener('input', e => {
   render();
 });
 
-// GASから取得（タイムアウトを15秒に延長）
-async function fetchFromGAS() {
-  return new Promise((resolve, reject) => {
-    const cb = 'cb_' + Date.now();
-    const s = document.createElement('script');
-    s.src = GAS_URL + '?callback=' + cb + '&_t=' + Date.now();
-    window[cb] = data => {
-      delete window[cb];
-      s.remove();
-      resolve(data);
-    };
-    s.onerror = () => {
-      s.remove();
-      reject(new Error('Fetch failed'));
-    };
-    // コールドスタートを考慮して15秒待つ
-    setTimeout(() => {
-      s.remove();
-      reject(new Error('Timeout'));
-    }, 15000);
-    document.head.appendChild(s);
-  });
+// fetchによる直接取得（リダイレクト追従）
+async function fetchCampaignData() {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000); // 最大20秒待つ
+
+  try {
+    const response = await fetch(GAS_URL + '?_t=' + Date.now(), {
+      method: 'GET',
+      redirect: 'follow',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      throw new Error(`HTTPエラー: ${response.status}`);
+    }
+    const data = await response.json();
+    if (data && data.error) {
+      throw new Error(`GASエラー: ${data.error}`);
+    }
+    return data;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
 }
 
 function updateView(rawData) {
@@ -518,37 +523,46 @@ function updateView(rawData) {
 }
 
 async function init() {
-  // 1. ローカルストレージに過去データがあれば即座に画面描画（待ち時間ゼロ化）
+  // 1. 保存された前回キャッシュがあれば即座に表示（0秒表示）
+  let hasLocalData = false;
   const cachedData = localStorage.getItem(LOCAL_STORAGE_KEY);
   if (cachedData) {
     try {
       const parsed = JSON.parse(cachedData);
       if (Array.isArray(parsed) && parsed.length > 0) {
         updateView(parsed);
+        hasLocalData = true;
       }
     } catch (e) {}
   }
 
-  // 2. バックグラウンドで最新データをGASから取得
+  // 2. 最新データを取得
   try {
-    const rawData = await fetchFromGAS();
-    if (rawData && Array.isArray(rawData) && rawData.length > 0) {
+    const rawData = await fetchCampaignData();
+    if (Array.isArray(rawData) && rawData.length > 0) {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(rawData));
-      updateView(rawData); // 最新データで更新
+      updateView(rawData);
+    } else {
+      throw new Error('データが空でした');
     }
-  } catch (e) {
-    console.warn('最新データの取得に失敗しました。ローカルデータまたは初期表示を維持します。', e);
-    // 初回アクセスでローカルキャッシュもなく通信失敗した場合
+  } catch (err) {
+    console.error('Fetch error:', err);
     const loading = document.getElementById('loading');
-    if (loading && loading.style.display !== 'none') {
-      loading.style.display = 'none';
-      if (allCampaigns.length === 0) {
-        document.getElementById('campaign-list').innerHTML = `
-          <div class="empty">
-            <div class="emoji">📡</div>
-            データの取得に失敗しました。<br>時間をおいて再度お試しください。
-          </div>`;
-      }
+    if (loading) loading.style.display = 'none';
+
+    // 前回のローカルデータも表示できていない場合のみエラー画面を表示
+    if (!hasLocalData) {
+      document.getElementById('campaign-list').innerHTML = `
+        <div class="empty">
+          <div class="emoji">⚠️</div>
+          <strong>データの取得に失敗しました</strong><br>
+          <span style="font-size:11px; color:#999; margin-top:6px; display:inline-block;">
+            詳細: ${err.message}
+          </span><br><br>
+          <button onclick="location.reload()" style="padding:8px 18px;border-radius:20px;border:1px solid #ccc;background:#fff;font-size:13px;cursor:pointer;">
+            再読み込み
+          </button>
+        </div>`;
     }
   }
 }
