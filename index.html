@@ -28,7 +28,6 @@
       min-height: 100dvh;
     }
 
-    /* ヘッダー */
     header {
       background: var(--primary);
       padding: 14px 16px 12px;
@@ -69,7 +68,6 @@
       white-space: nowrap;
     }
 
-    /* 検索バー */
     .search-wrap {
       padding: 10px 14px 0;
       background: var(--primary);
@@ -87,7 +85,6 @@
     }
     .search-wrap input::placeholder { color: rgba(255,255,255,0.55); }
 
-    /* フィルターバー */
     .filter-bar {
       display: flex;
       gap: 6px;
@@ -117,14 +114,12 @@
       font-weight: 700;
     }
 
-    /* 結果バー */
     .result-bar {
       padding: 10px 16px 4px;
       font-size: 11px;
       color: var(--gray);
     }
 
-    /* リスト */
     .campaign-list {
       padding: 4px 12px 80px;
       display: flex;
@@ -132,7 +127,6 @@
       gap: 10px;
     }
 
-    /* カード */
     .campaign-card {
       background: var(--white);
       border-radius: 14px;
@@ -146,7 +140,6 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* カードヘッダー */
     .card-head {
       display: flex;
       align-items: center;
@@ -177,22 +170,11 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .period.active-now {
-      color: #059669;
-      font-weight: 700;
-    }
-    .period.ending-soon {
-      color: #D97706;
-      font-weight: 700;
-    }
-    .period.expired {
-      color: #9CA3AF;
-    }
+    .period.active-now { color: #059669; font-weight: 700; }
+    .period.ending-soon { color: #D97706; font-weight: 700; }
+    .period.expired { color: #9CA3AF; }
 
-    /* カードボディ */
-    .card-body {
-      padding: 10px 14px 12px;
-    }
+    .card-body { padding: 10px 14px 12px; }
     .campaign-title {
       font-size: 14px;
       font-weight: 700;
@@ -200,7 +182,6 @@
       margin-bottom: 8px;
     }
 
-    /* 商品リスト */
     .product-item {
       display: flex;
       align-items: center;
@@ -231,7 +212,6 @@
       padding: 3px 8px;
     }
 
-    /* 備考 */
     .card-note {
       margin-top: 8px;
       font-size: 11px;
@@ -243,10 +223,7 @@
       line-height: 1.5;
     }
 
-    /* パンフレットボタン */
-    .card-footer {
-      padding: 0 14px 12px;
-    }
+    .card-footer { padding: 0 14px 12px; }
     .pamphlet-btn {
       display: flex;
       align-items: center;
@@ -267,7 +244,6 @@
     }
     .pamphlet-btn:active { background: var(--border); }
 
-    /* 空・ローディング */
     .empty {
       text-align: center;
       padding: 60px 20px;
@@ -285,6 +261,7 @@
       justify-content: center;
       gap: 14px;
       z-index: 999;
+      transition: opacity 0.2s ease;
     }
     .spinner {
       width: 38px; height: 38px;
@@ -326,12 +303,9 @@
 <div class="campaign-list" id="campaign-list"></div>
 
 <script>
-// ============================================================
-// GAS URL（キャンペーンスプレッドシート用）
-// ============================================================
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyTcoGfyfZvPzEQ5m5PkVp_4sBBXKYA8NvZyUzJR_G8NkEx3YblSBKUSKy5ubU4awZRgA/exec';
+const LOCAL_STORAGE_KEY = 'gamo_campaign_cache_v1';
 
-// カテゴリーカラー
 const CAT_COLOR = {
   'ブリーチ':   ['#7B3FA0','#F0E6F9'],
   'スキンケア': ['#C0306A','#FDE6EF'],
@@ -346,40 +320,6 @@ function getCatColors(cat) {
   return CAT_COLOR[cat] || ['#555','#f0f0f0'];
 }
 
-// フォールバックデータ（スプレッドシートの現在データ）
-const FALLBACK_DATA = [
-  {
-    makerCode:'116', maker:'シュワルフコフ', category:'ブリーチ',
-    title:'夏のブリーチデザインサポートキャンペーン',
-    start:'2026/07/01', end:'2026/08/31',
-    products:[
-      { name:'ファイバープレックス パウダーブリーチ', spec:'', deal:'2+1' }
-    ],
-    note:'', pamphlet:'https://acrobat.adobe.com/id/urn:aaid:sc:AP:08b54421-dac6-4fa8-a6bb-ad27ab2eabac'
-  },
-  {
-    makerCode:'116', maker:'シュワルフコフ', category:'ブリーチ',
-    title:'（新規お取り扱いサロン様限定）夏のブリーチデザインサポートキャンペーン',
-    start:'2026/06/01', end:'2026/07/30',
-    products:[
-      { name:'イゴラ ヴァリオブロンドプラス', spec:'', deal:'1+1' }
-    ],
-    note:'新たにお取り扱いいただけるサロン様限定企画となります',
-    pamphlet:'https://acrobat.adobe.com/id/urn:aaid:sc:AP:e994f5ef-fc60-4b45-9ff0-b308eb3398a3'
-  },
-  {
-    makerCode:'613', maker:'BJC', category:'スキンケア',
-    title:'V3ファンデーション5+1キャンペーン',
-    start:'2026/06/01', end:'2026/07/30',
-    products:[
-      { name:'インテリジェントファンデーション', spec:'15g', deal:'5+1' },
-      { name:'インテリジェントファンデーション(レフィル/パフ付）', spec:'15gレフィル', deal:'5+1' }
-    ],
-    note:'', pamphlet:''
-  },
-];
-
-// 期間ステータス判定
 function getPeriodStatus(start, end) {
   const now = new Date();
   const s = new Date(start.replace(/\//g,'-'));
@@ -393,9 +333,9 @@ function getPeriodStatus(start, end) {
 }
 
 function periodLabel(status, start, end) {
-  const s = start.replace(/\//g,'/').slice(5); // MM/DD
+  const s = start.replace(/\//g,'/').slice(5);
   const e = end.replace(/\//g,'/').slice(5);
-  const startFull = start.slice(2).replace(/\//g,'/'); // YY/MM/DD
+  const startFull = start.slice(2).replace(/\//g,'/');
   const endFull = end.slice(2).replace(/\//g,'/');
   if (status === 'expired') return `終了 ${startFull}〜${endFull}`;
   if (status === 'upcoming') return `📅 ${startFull}〜`;
@@ -406,11 +346,9 @@ function periodLabel(status, start, end) {
   return `✅ ${s}〜${e}`;
 }
 
-// データを「メーカー・タイトル・期間単位」にグループ化（★ここを修正）
 function groupCampaigns(data) {
   const map = new Map();
   data.forEach(row => {
-    // 期間（start, end）も含めて同一キャンペーンかを判定する
     const key = `${row.makerCode}_${row.title}_${row.start}_${row.end}`;
     if (!map.has(key)) {
       map.set(key, {
@@ -438,7 +376,7 @@ function buildCard(camp, index) {
 
   const card = document.createElement('div');
   card.className = 'campaign-card';
-  card.style.animationDelay = `${Math.min(index * 40, 400)}ms`;
+  card.style.animationDelay = `${Math.min(index * 30, 300)}ms`;
   if (status === 'expired') card.style.opacity = '0.6';
 
   const productsHTML = camp.products.map(p => `
@@ -451,15 +389,11 @@ function buildCard(camp, index) {
     </div>
   `).join('');
 
-  const noteHTML = camp.note
-    ? `<div class="card-note">⚠️ ${camp.note}</div>` : '';
-
-  const pamphletHTML = camp.pamphlet
-    ? `<div class="card-footer">
-        <a class="pamphlet-btn" href="${camp.pamphlet}" target="_blank" rel="noopener">
-          📄 パンフレットを見る
-        </a>
-      </div>` : '';
+  const noteHTML = camp.note ? `<div class="card-note">⚠️ ${camp.note}</div>` : '';
+  const pamphletHTML = camp.pamphlet ? `
+    <div class="card-footer">
+      <a class="pamphlet-btn" href="${camp.pamphlet}" target="_blank" rel="noopener">📄 パンフレットを見る</a>
+    </div>` : '';
 
   card.innerHTML = `
     <div class="card-head">
@@ -536,32 +470,34 @@ document.getElementById('search-input').addEventListener('input', e => {
   render();
 });
 
-// GASからデータ取得（タイムスタンプ付きでキャッシュ防止）
+// GASから取得（タイムアウトを15秒に延長）
 async function fetchFromGAS() {
   return new Promise((resolve, reject) => {
     const cb = 'cb_' + Date.now();
     const s = document.createElement('script');
     s.src = GAS_URL + '?callback=' + cb + '&_t=' + Date.now();
-    window[cb] = data => { delete window[cb]; s.remove(); resolve(data); };
-    s.onerror = () => reject();
-    setTimeout(() => reject(), 8000);
+    window[cb] = data => {
+      delete window[cb];
+      s.remove();
+      resolve(data);
+    };
+    s.onerror = () => {
+      s.remove();
+      reject(new Error('Fetch failed'));
+    };
+    // コールドスタートを考慮して15秒待つ
+    setTimeout(() => {
+      s.remove();
+      reject(new Error('Timeout'));
+    }, 15000);
     document.head.appendChild(s);
   });
 }
 
-async function init() {
-  let rawData = null;
-
-  if (GAS_URL && GAS_URL !== 'YOUR_CAMPAIGN_GAS_URL_HERE') {
-    try { rawData = await fetchFromGAS(); } catch(e) {}
-  }
-  if (!rawData) rawData = FALLBACK_DATA;
-
-  // 終了済みを除外
+function updateView(rawData) {
   const grouped = groupCampaigns(rawData);
   allCampaigns = grouped.filter(c => getPeriodStatus(c.start, c.end) !== 'expired');
 
-  // メーカーコード順 → 同一コード内は終了間近を先頭に
   allCampaigns.sort((a, b) => {
     const codeA = parseInt(a.makerCode) || 0;
     const codeB = parseInt(b.makerCode) || 0;
@@ -573,7 +509,48 @@ async function init() {
   document.getElementById('total-count').textContent = allCampaigns.length + ' 件';
   buildFilter(allCampaigns);
   render();
-  document.getElementById('loading').style.display = 'none';
+
+  const loading = document.getElementById('loading');
+  if (loading) {
+    loading.style.opacity = '0';
+    setTimeout(() => { loading.style.display = 'none'; }, 200);
+  }
+}
+
+async function init() {
+  // 1. ローカルストレージに過去データがあれば即座に画面描画（待ち時間ゼロ化）
+  const cachedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (cachedData) {
+    try {
+      const parsed = JSON.parse(cachedData);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        updateView(parsed);
+      }
+    } catch (e) {}
+  }
+
+  // 2. バックグラウンドで最新データをGASから取得
+  try {
+    const rawData = await fetchFromGAS();
+    if (rawData && Array.isArray(rawData) && rawData.length > 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(rawData));
+      updateView(rawData); // 最新データで更新
+    }
+  } catch (e) {
+    console.warn('最新データの取得に失敗しました。ローカルデータまたは初期表示を維持します。', e);
+    // 初回アクセスでローカルキャッシュもなく通信失敗した場合
+    const loading = document.getElementById('loading');
+    if (loading && loading.style.display !== 'none') {
+      loading.style.display = 'none';
+      if (allCampaigns.length === 0) {
+        document.getElementById('campaign-list').innerHTML = `
+          <div class="empty">
+            <div class="emoji">📡</div>
+            データの取得に失敗しました。<br>時間をおいて再度お試しください。
+          </div>`;
+      }
+    }
+  }
 }
 
 init();
